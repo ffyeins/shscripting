@@ -19,6 +19,7 @@ Target `#!/bin/bash`. Requires bash 4.0+.
 
 ## Coding conventions
 
+- Use 4 spaces for indentation (not tabs)
 - Use `[[ ]]` for conditionals; use `case` for pattern matching
 - Use `local` for function-scoped variables
 - Use `command -v` for command existence checks (not `which`)
@@ -45,6 +46,18 @@ shellcheck -x -s bash franlib.sh example_ssh_batch.sh example_ssh_hello.sh examp
 ```
 
 Expected: zero warnings. SC2329 (info) on test file is a false positive for indirectly-invoked cleanup functions.
+
+## Output functions
+
+The library provides colored output functions for different message types:
+
+- `fl_info` — informational messages (cyan tag `[INFO]`, default message text)
+- `fl_warn` — warning messages (entire line in yellow: `[WARN] message`)
+- `fl_error` — error messages (entire line in bold red: `[ERROR] message`)
+- `fl_success` — success messages (entire line in green: `[SUCCESS] message`)
+- `fl_print_command` — command logging (cyan tag `[COMMAND]`, default message text)
+
+For `fl_warn`, `fl_error`, and `fl_success`, the entire line (tag and message) is colored. All output goes to stderr to keep stdout clean for data.
 
 ## User input
 

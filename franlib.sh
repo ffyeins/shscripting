@@ -12,12 +12,14 @@ if [[ -t 2 ]]; then
     _FL_CYAN='\033[0;36m'
     _FL_YELLOW='\033[0;33m'
     _FL_RED='\033[0;31m'
+    _FL_GREEN='\033[0;32m'
     _FL_BOLD='\033[1m'
     _FL_RESET='\033[0m'
 else
     _FL_CYAN=''
     _FL_YELLOW=''
     _FL_RED=''
+    _FL_GREEN=''
     _FL_BOLD=''
     _FL_RESET=''
 fi
@@ -29,15 +31,19 @@ fl_info() {
 }
 
 fl_warn() {
-    printf '%b[WARN]%b %s\n' "$_FL_YELLOW" "$_FL_RESET" "$1" >&2
+    printf '%b[WARN] %s%b\n' "$_FL_YELLOW" "$1" "$_FL_RESET" >&2
 }
 
 fl_error() {
-    printf '%b%b[ERROR]%b %s\n' "$_FL_BOLD" "$_FL_RED" "$_FL_RESET" "$1" >&2
+    printf '%b%b[ERROR] %s%b\n' "$_FL_BOLD" "$_FL_RED" "$1" "$_FL_RESET" >&2
+}
+
+fl_success() {
+    printf '%b[SUCCESS] %s%b\n' "$_FL_GREEN" "$1" "$_FL_RESET" >&2
 }
 
 fl_print_command() {
-    printf '%b[COMMAND] $%b %s\n' "$_FL_CYAN" "$_FL_RESET" "$1" >&2
+    printf '%b[COMMAND]%b %s\n' "$_FL_CYAN" "$_FL_RESET" " $ $1" >&2
 }
 
 fl_die() {
