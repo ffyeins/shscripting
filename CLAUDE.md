@@ -1,22 +1,24 @@
-# shscripting — POSIX sh helper library
+# shscripting — sh helper library
 
 ## Project overview
 
-`franlib.sh` is a POSIX sh helper library that other shell scripts source for common functionality: colored output, user input, command execution, SSH automation, and cleanup handling. The goal is minimal dependencies so scripts can be shared with anyone who has a standard POSIX shell.
+`franlib.sh` is a sh helper library that other shell scripts source for common functionality: colored output, user input, command execution, SSH automation, and cleanup handling. The goal is minimal dependencies so scripts can be shared with anyone who has a standard shell.
 
 ## Files
 
 - `franlib.sh` — the library (source it, don't execute it)
 - `example_ssh_batch.sh` — example script demonstrating SSH batch execution
-- `test_franlib.sh` — test suite (16 tests)
+- `test_franlib.sh` — test suite (21 tests)
 
 ## Shell compatibility
 
-Target `#!/bin/sh` only. Must work on:
+Target `#!/bin/sh`. Must work on:
 - dash (Debian/Ubuntu)
 - ash (Alpine/BusyBox)
 - bash in sh mode (macOS)
 - FreeBSD sh
+
+Note: the project is migrating to `#!/bin/bash`; the SSH section no longer requires `sshpass`.
 
 ## Coding conventions
 
@@ -54,7 +56,7 @@ Expected: zero warnings. SC3043 (`local`) is suppressed via directive. SC2329 (i
 
 ## SSH automation
 
-SSH password automation uses `sshpass` as a soft dependency (`SSHPASS="$pw" sshpass -e ssh ...`). On Linux without sshpass, falls back to `SSH_ASKPASS` + `setsid`. The library prints install instructions if neither method is available.
+SSH password automation uses `SSH_ASKPASS` with `SSH_ASKPASS_REQUIRE=force` (OpenSSH 8.4+, Sep 2020) as the primary method — zero external dependencies. Falls back to `SSH_ASKPASS` + `setsid` on older Linux, then to `sshpass` if installed.
 
 SSH options for automation: `-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR`.
 

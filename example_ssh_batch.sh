@@ -6,7 +6,6 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 . "$SCRIPT_DIR/franlib.sh"
 
 fl_require_cmd ssh
-fl_require_cmd sshpass "apt install sshpass / brew install hudochenkov/sshpass/sshpass"
 
 # ── Gather credentials ──────────────────────────────────────────────
 

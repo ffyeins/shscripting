@@ -110,6 +110,59 @@ fl_run_capture() {
 
 # ── 5. SSH password automation ──────────────────────────────────────
 
+# Check if OpenSSH supports SSH_ASKPASS_REQUIRE (>= 8.4)
+_fl_ssh_check_askpass_require() {
+    local _fl_ver_str _fl_major _fl_minor
+    _fl_ver_str=$(ssh -V 2>&1) || return 1
+    # Extract version: "OpenSSH_8.4p1, ..." → "8.4"
+    _fl_ver_str=${_fl_ver_str#*OpenSSH_}
+    _fl_major=${_fl_ver_str%%.*}
+    _fl_ver_str=${_fl_ver_str#*.}
+    _fl_minor=${_fl_ver_str%%[^0-9]*}
+    # Validate we got numbers
+    case "$_fl_major$_fl_minor" in
+        *[!0-9]*) return 1 ;;
+    esac
+    [ "$_fl_major" -gt 8 ] && return 0
+    [ "$_fl_major" -eq 8 ] && [ "$_fl_minor" -ge 4 ] && return 0
+    return 1
+}
+
+# Primary: SSH_ASKPASS with SSH_ASKPASS_REQUIRE=force (OpenSSH 8.4+)
+_fl_ssh_via_askpass_force() {
+    local _fl_host _fl_user _fl_pass _fl_cmds _fl_askpass_script _fl_rc
+    _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
+    _fl_askpass_script=$(fl_tempfile fl_askpass)
+    printf '#!/bin/sh\nprintf "%%s" "%s"\n' "$_fl_pass" > "$_fl_askpass_script"
+    chmod 700 "$_fl_askpass_script"
+    _fl_rc=0
+    SSH_ASKPASS="$_fl_askpass_script" SSH_ASKPASS_REQUIRE=force ssh \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -o LogLevel=ERROR \
+        "${_fl_user}@${_fl_host}" "$_fl_cmds" </dev/null || _fl_rc=$?
+    rm -f "$_fl_askpass_script"
+    return "$_fl_rc"
+}
+
+# Fallback for older Linux: SSH_ASKPASS + setsid (detaches tty)
+_fl_ssh_via_askpass_setsid() {
+    local _fl_host _fl_user _fl_pass _fl_cmds _fl_askpass_script _fl_rc
+    _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
+    _fl_askpass_script=$(fl_tempfile fl_askpass)
+    printf '#!/bin/sh\nprintf "%%s" "%s"\n' "$_fl_pass" > "$_fl_askpass_script"
+    chmod 700 "$_fl_askpass_script"
+    _fl_rc=0
+    SSH_ASKPASS="$_fl_askpass_script" DISPLAY=:0 setsid ssh \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -o LogLevel=ERROR \
+        "${_fl_user}@${_fl_host}" "$_fl_cmds" </dev/null || _fl_rc=$?
+    rm -f "$_fl_askpass_script"
+    return "$_fl_rc"
+}
+
+# Last resort: sshpass (if installed)
 _fl_ssh_via_sshpass() {
     local _fl_host _fl_user _fl_pass _fl_cmds
     _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
@@ -120,47 +173,35 @@ _fl_ssh_via_sshpass() {
         "${_fl_user}@${_fl_host}" "$_fl_cmds"
 }
 
-_fl_ssh_via_askpass() {
-    local _fl_host _fl_user _fl_pass _fl_cmds _fl_askpass_script _fl_rc
-    _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
-    _fl_askpass_script=$(fl_tempfile fl_askpass)
-    printf '#!/bin/sh\nprintf "%%s" "%s"\n' "$_fl_pass" > "$_fl_askpass_script"
-    chmod 700 "$_fl_askpass_script"
-    SSH_ASKPASS="$_fl_askpass_script" DISPLAY=:0 setsid ssh \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        -o LogLevel=ERROR \
-        "${_fl_user}@${_fl_host}" "$_fl_cmds" </dev/null
-    _fl_rc=$?
-    rm -f "$_fl_askpass_script"
-    return "$_fl_rc"
-}
-
 fl_ssh_run() {
     local _fl_host _fl_user _fl_pass _fl_cmds
     _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
 
+    # 1. SSH_ASKPASS_REQUIRE=force (OpenSSH 8.4+, zero dependencies)
+    if _fl_ssh_check_askpass_require; then
+        _fl_ssh_via_askpass_force "$_fl_host" "$_fl_user" "$_fl_pass" "$_fl_cmds"
+        return $?
+    fi
+
+    # 2. SSH_ASKPASS + setsid (older Linux)
+    if fl_is_command setsid; then
+        fl_warn "OpenSSH < 8.4; using setsid SSH_ASKPASS fallback"
+        _fl_ssh_via_askpass_setsid "$_fl_host" "$_fl_user" "$_fl_pass" "$_fl_cmds"
+        return $?
+    fi
+
+    # 3. sshpass (if available)
     if fl_is_command sshpass; then
         _fl_ssh_via_sshpass "$_fl_host" "$_fl_user" "$_fl_pass" "$_fl_cmds"
         return $?
     fi
 
-    # Linux fallback: SSH_ASKPASS + setsid
-    case "$(uname -s)" in
-        Linux*)
-            if fl_is_command setsid; then
-                fl_warn "sshpass not found; trying SSH_ASKPASS fallback (less reliable)"
-                _fl_ssh_via_askpass "$_fl_host" "$_fl_user" "$_fl_pass" "$_fl_cmds"
-                return $?
-            fi
-            ;;
-    esac
-
-    fl_error "sshpass is required for SSH password automation"
-    fl_error "Install it:"
-    fl_error "  Debian/Ubuntu : apt install sshpass"
-    fl_error "  RHEL/Fedora   : dnf install sshpass"
-    fl_error "  macOS (brew)  : brew install hudochenkov/sshpass/sshpass"
+    # 4. No method available
+    fl_error "Cannot automate SSH password authentication"
+    fl_error "Requires one of:"
+    fl_error "  - OpenSSH >= 8.4 (for SSH_ASKPASS_REQUIRE)"
+    fl_error "  - setsid command (Linux)"
+    fl_error "  - sshpass: apt install sshpass / brew install hudochenkov/sshpass/sshpass"
     return 1
 }
 

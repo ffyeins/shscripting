@@ -121,6 +121,38 @@ assert_eq "fl_confirm default=n, empty" "$_rc" "1"
 out=$(printf 'hello world\n' | fl_ask "prompt:" 2>/dev/null)
 assert_eq "fl_ask reads input" "$out" "hello world"
 
+# ── _fl_ssh_check_askpass_require (version parsing) ─────────────────
+
+# Test by mocking ssh -V output via a wrapper script
+_fl_test_version_check() {
+    local _ver_string _expect _label _mock_ssh _mock_dir _rc
+    _ver_string="$1"; _expect="$2"; _label="$3"
+
+    _mock_dir=$(fl_tempfile fl_mockdir)
+    rm -f "$_mock_dir"
+    mkdir "$_mock_dir"
+    _mock_ssh="$_mock_dir/ssh"
+    printf '#!/bin/sh\nprintf "%%s\\n" "%s" >&2\n' "$_ver_string" > "$_mock_ssh"
+    chmod 755 "$_mock_ssh"
+
+    _rc=0
+    PATH="$_mock_dir:$PATH" _fl_ssh_check_askpass_require || _rc=$?
+
+    rm -rf "$_mock_dir"
+
+    if [ "$_expect" = "0" ]; then
+        assert_eq "$_label" "$_rc" "0"
+    else
+        assert_eq "$_label" "$([ "$_rc" -ne 0 ] && echo fail)" "fail"
+    fi
+}
+
+_fl_test_version_check "OpenSSH_8.4p1, OpenSSL 1.1.1" 0 "ssh version 8.4 >= 8.4"
+_fl_test_version_check "OpenSSH_9.2p1 Debian-2" 0 "ssh version 9.2 >= 8.4"
+_fl_test_version_check "OpenSSH_8.3p1, OpenSSL 1.1.1" 1 "ssh version 8.3 < 8.4"
+_fl_test_version_check "OpenSSH_7.9p1" 1 "ssh version 7.9 < 8.4"
+_fl_test_version_check "OpenSSH_10.0p1" 0 "ssh version 10.0 >= 8.4"
+
 # ── Summary ──────────────────────────────────────────────────────────
 
 printf '\n' >&2
