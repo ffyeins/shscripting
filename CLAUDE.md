@@ -17,6 +17,12 @@
 
 Target `#!/bin/bash`. Requires bash 4.0+.
 
+TODO: we should remove this requirement. Not many systems have versions above 4.
+
+I recently got this error: "[WARN] This script requires bash 4.0 or later. Current version: 3.2.57(1)-release"
+
+We should search for the best bash version to stick to (for wide compatibilty), and review the code to plan what modifications we should do to make it compatible with said version.
+
 ## Coding conventions
 
 - Use 4 spaces for indentation (not tabs)
