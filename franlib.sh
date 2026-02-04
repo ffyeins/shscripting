@@ -63,30 +63,11 @@ fl_ask_secret() {
 }
 
 fl_confirm() {
-    local _fl_prompt _fl_default _fl_reply
-    _fl_prompt="$1"
-    _fl_default="${2:-}"
-
-    case "$_fl_default" in
-        [Yy]*) _fl_prompt="$_fl_prompt [Y/n]" ;;
-        [Nn]*) _fl_prompt="$_fl_prompt [y/N]" ;;
-        *)     _fl_prompt="$_fl_prompt [y/n]" ;;
-    esac
-
+    local _fl_prompt _fl_reply
+    _fl_prompt="${1:-Press ENTER to continue...}"
     printf '%s ' "$_fl_prompt" >&2
     IFS= read -r _fl_reply
-
-    case "$_fl_reply" in
-        [Yy]*) return 0 ;;
-        [Nn]*) return 1 ;;
-        '')
-            case "$_fl_default" in
-                [Yy]*) return 0 ;;
-                *)     return 1 ;;
-            esac
-            ;;
-        *) return 1 ;;
-    esac
+    return 0
 }
 
 # ── 4. Command execution ────────────────────────────────────────────

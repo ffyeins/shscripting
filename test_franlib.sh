@@ -108,23 +108,15 @@ _out=$( (
 ) )
 assert_eq "cleanup runs on exit" "$_out" "cleaned"
 
-# ── fl_confirm (non-interactive, pipe in answer) ────────────────────
+# ── fl_confirm (non-interactive, always returns 0) ──────────────────
 
 _rc=0
-printf 'y\n' | fl_confirm "test?" 2>/dev/null || _rc=$?
-assert_eq "fl_confirm y" "$_rc" "0"
+printf '\n' | fl_confirm "test?" 2>/dev/null || _rc=$?
+assert_eq "fl_confirm custom prompt" "$_rc" "0"
 
 _rc=0
-printf 'n\n' | fl_confirm "test?" 2>/dev/null || _rc=$?
-assert_eq "fl_confirm n" "$_rc" "1"
-
-_rc=0
-printf '\n' | fl_confirm "test?" "y" 2>/dev/null || _rc=$?
-assert_eq "fl_confirm default=y, empty" "$_rc" "0"
-
-_rc=0
-printf '\n' | fl_confirm "test?" "n" 2>/dev/null || _rc=$?
-assert_eq "fl_confirm default=n, empty" "$_rc" "1"
+printf '\n' | fl_confirm 2>/dev/null || _rc=$?
+assert_eq "fl_confirm default prompt" "$_rc" "0"
 
 # ── fl_ask (non-interactive) ────────────────────────────────────────
 

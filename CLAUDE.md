@@ -46,6 +46,10 @@ shellcheck -x -s bash franlib.sh example_ssh_batch.sh example_ssh_hello.sh examp
 
 Expected: zero warnings. SC2329 (info) on test file is a false positive for indirectly-invoked cleanup functions.
 
+## User input
+
+`fl_ask` prompts for user input and returns the value. `fl_ask_secret` prompts for secret input (passwords) without echoing to the terminal. `fl_confirm` pauses execution and waits for the user to press ENTER to continue. It accepts an optional custom prompt (defaults to "Press ENTER to continue...") and always returns 0.
+
 ## Command execution
 
 `fl_run` is the central place for command execution. It logs every command to stderr via `fl_print_command` before running it, so script output always shows what was executed. Both `fl_run_or_die` and `fl_run_capture` delegate to `fl_run`, so all command variants produce consistent logging. Prefer `fl_run` (and its variants `fl_run_or_die`, `fl_run_capture`) over calling commands directly.

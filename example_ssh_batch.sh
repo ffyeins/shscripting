@@ -26,7 +26,7 @@ HOSTS=(
 )
 
 fl_info "Will run '$cmds' on ${#HOSTS[@]} host(s)"
-fl_confirm "Proceed?" "y" || fl_die "Aborted by user"
+fl_confirm "Press ENTER to proceed..."
 
 # ── Cleanup: clear password variable on exit ────────────────────────
 
