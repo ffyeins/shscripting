@@ -1,8 +1,8 @@
-# shscripting — sh helper library
+# shscripting — bash helper library
 
 ## Project overview
 
-`franlib.sh` is a sh helper library that other shell scripts source for common functionality: colored output, user input, command execution, SSH automation, and cleanup handling. The goal is minimal dependencies so scripts can be shared with anyone who has a standard shell.
+`franlib.sh` is a bash helper library that other shell scripts source for common functionality: colored output, command logging, user input, command execution, SSH automation, and cleanup handling. The goal is minimal dependencies so scripts can be shared with anyone who has bash.
 
 ## Files
 
@@ -12,47 +12,40 @@
 
 ## Shell compatibility
 
-Target `#!/bin/sh`. Must work on:
-- dash (Debian/Ubuntu)
-- ash (Alpine/BusyBox)
-- bash in sh mode (macOS)
-- FreeBSD sh
-
-Note: the project is migrating to `#!/bin/bash`; the SSH section no longer requires `sshpass`.
+Target `#!/bin/bash`. Requires bash 4.0+.
 
 ## Coding conventions
 
-- No bashisms: no `[[ ]]`, no arrays, no `${var//pat/rep}`, no `read -s`
-- Use `[ ]` and `case` for conditionals
-- Use `local` — not POSIX but works on all target shells (suppress SC3043)
+- Use `[[ ]]` for conditionals; use `case` for pattern matching
+- Use `local` for function-scoped variables
 - Use `command -v` for command existence checks (not `which`)
-- Use `stty -echo` for secret input
-- Newline-delimited strings + `set --` instead of arrays
+- Use `read -s` for secret input
+- Use bash arrays for lists
 - All library functions prefixed with `fl_`; internal functions prefixed with `_fl_`
 - All messages go to stderr so stdout stays clean for data
-- Colors only when `[ -t 2 ]` (stderr is a terminal)
+- Colors only when `[[ -t 2 ]]` (stderr is a terminal)
 
 ## Testing
 
 ```sh
-# Run tests with macOS default shell
-sh test_franlib.sh
-
-# Run tests with bash POSIX mode
-bash --posix test_franlib.sh
+bash test_franlib.sh
 ```
 
 ## Linting
 
 ```sh
 # Library (standalone)
-shellcheck -s sh franlib.sh
+shellcheck -s bash franlib.sh
 
 # All files (follow source directives)
-shellcheck -x -s sh franlib.sh example_ssh_batch.sh test_franlib.sh
+shellcheck -x -s bash franlib.sh example_ssh_batch.sh example_ssh_hello.sh example_basic.sh test_franlib.sh
 ```
 
-Expected: zero warnings. SC3043 (`local`) is suppressed via directive. SC2329 (info) on test file is a false positive for indirectly-invoked cleanup functions.
+Expected: zero warnings. SC2329 (info) on test file is a false positive for indirectly-invoked cleanup functions.
+
+## Command execution
+
+`fl_run` is the central place for command execution. It logs every command to stderr via `fl_print_command` before running it, so script output always shows what was executed. Prefer `fl_run` (and its variants `fl_run_or_die`, `fl_run_capture`) over calling commands directly.
 
 ## SSH automation
 
@@ -62,14 +55,15 @@ SSH options for automation: `-o StrictHostKeyChecking=no -o UserKnownHostsFile=/
 
 ## Iteration pattern
 
-Use `while read` with heredoc for host lists — no subshell, so `fl_die` and variable mutation work:
+Use arrays for host lists:
 
-```sh
-while IFS= read -r host; do
-    [ -z "$host" ] && continue
+```bash
+HOSTS=(
+    server1.example.com
+    server2.example.com
+)
+
+for host in "${HOSTS[@]}"; do
     fl_ssh_run "$host" "$user" "$pass" "$cmds"
-done <<EOF
-server1.example.com
-server2.example.com
-EOF
+done
 ```

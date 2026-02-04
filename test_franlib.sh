@@ -1,6 +1,5 @@
-#!/bin/sh
+#!/bin/bash
 # test_franlib.sh — Tests for franlib.sh
-# shellcheck disable=SC3043  # local works on all target shells
 set -eu
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,7 +11,7 @@ _fail=0
 assert_eq() {
     local _label _got _want
     _label="$1"; _got="$2"; _want="$3"
-    if [ "$_got" = "$_want" ]; then
+    if [[ "$_got" = "$_want" ]]; then
         fl_info "PASS: $_label"
         _pass=$((_pass + 1))
     else
@@ -26,7 +25,7 @@ assert_rc() {
     _label="$1"; _want_rc="$2"; shift 2
     _got_rc=0
     "$@" || _got_rc=$?
-    if [ "$_got_rc" -eq "$_want_rc" ]; then
+    if [[ "$_got_rc" -eq "$_want_rc" ]]; then
         fl_info "PASS: $_label"
         _pass=$((_pass + 1))
     else
@@ -59,7 +58,7 @@ _pass=$((_pass + 1))
 # fl_require_cmd for missing command — run in subshell to catch exit
 _rc=0
 (fl_require_cmd nonexistent_xyz "some hint" 2>/dev/null) || _rc=$?
-assert_eq "fl_require_cmd dies for missing cmd" "$([ "$_rc" -ne 0 ] && echo yes)" "yes"
+assert_eq "fl_require_cmd dies for missing cmd" "$([[ "$_rc" -ne 0 ]] && echo yes)" "yes"
 
 # ── fl_run / fl_run_or_die / fl_run_capture ─────────────────────────
 
@@ -73,12 +72,12 @@ assert_rc "fl_run_or_die true" 0 fl_run_or_die true
 
 _rc=0
 (fl_run_or_die false 2>/dev/null) || _rc=$?
-assert_eq "fl_run_or_die false dies" "$([ "$_rc" -ne 0 ] && echo yes)" "yes"
+assert_eq "fl_run_or_die false dies" "$([[ "$_rc" -ne 0 ]] && echo yes)" "yes"
 
 # ── fl_tempfile ──────────────────────────────────────────────────────
 
 tmp=$(fl_tempfile testfl)
-assert_eq "fl_tempfile creates file" "$([ -f "$tmp" ] && echo yes)" "yes"
+assert_eq "fl_tempfile creates file" "$([[ -f "$tmp" ]] && echo yes)" "yes"
 rm -f "$tmp"
 
 # ── cleanup framework ───────────────────────────────────────────────
@@ -140,10 +139,10 @@ _fl_test_version_check() {
 
     rm -rf "$_mock_dir"
 
-    if [ "$_expect" = "0" ]; then
+    if [[ "$_expect" = "0" ]]; then
         assert_eq "$_label" "$_rc" "0"
     else
-        assert_eq "$_label" "$([ "$_rc" -ne 0 ] && echo fail)" "fail"
+        assert_eq "$_label" "$([[ "$_rc" -ne 0 ]] && echo fail)" "fail"
     fi
 }
 
@@ -157,7 +156,7 @@ _fl_test_version_check "OpenSSH_10.0p1" 0 "ssh version 10.0 >= 8.4"
 
 printf '\n' >&2
 fl_info "Results: $_pass passed, $_fail failed"
-if [ "$_fail" -gt 0 ]; then
+if [[ "$_fail" -gt 0 ]]; then
     fl_error "Some tests failed"
     exit 1
 fi

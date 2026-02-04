@@ -1,15 +1,14 @@
-#!/bin/sh
-# franlib.sh — POSIX sh helper library
+#!/bin/bash
+# franlib.sh — bash helper library
 # Source this file; do not execute directly.
-# shellcheck disable=SC3043  # local is not POSIX but works on dash, ash, bash, FreeBSD sh
 
 # ── 1. Source guard & terminal detection ─────────────────────────────
 
-if [ -n "${_FL_SOURCED:-}" ]; then return 0; fi
+if [[ -n "${_FL_SOURCED:-}" ]]; then return 0; fi
 _FL_SOURCED=1
 
 # Colors only when stderr is a terminal
-if [ -t 2 ]; then
+if [[ -t 2 ]]; then
     _FL_CYAN='\033[0;36m'
     _FL_YELLOW='\033[0;33m'
     _FL_RED='\033[0;31m'
@@ -37,6 +36,10 @@ fl_error() {
     printf '%b%b[ERROR]%b %s\n' "$_FL_BOLD" "$_FL_RED" "$_FL_RESET" "$1" >&2
 }
 
+fl_print_command() {
+    printf '%b[COMMAND] $%b %s\n' "$_FL_CYAN" "$_FL_RESET" "$1" >&2
+}
+
 fl_die() {
     fl_error "$1"
     exit "${2:-1}"
@@ -51,14 +54,9 @@ fl_ask() {
 }
 
 fl_ask_secret() {
-    local _fl_old_tty
-    _fl_old_tty=$(stty -g 2>/dev/null)
-    trap 'stty "$_fl_old_tty" 2>/dev/null' INT TERM
+    local _fl_answer
     printf '%s ' "$1" >&2
-    stty -echo 2>/dev/null
-    IFS= read -r _fl_answer
-    stty "$_fl_old_tty" 2>/dev/null
-    trap - INT TERM
+    IFS= read -r -s _fl_answer
     printf '\n' >&2
     printf '%s' "$_fl_answer"
 }
@@ -93,6 +91,7 @@ fl_confirm() {
 # ── 4. Command execution ────────────────────────────────────────────
 
 fl_run() {
+    fl_print_command "$*"
     "$@"
 }
 
@@ -120,12 +119,8 @@ _fl_ssh_check_askpass_require() {
     _fl_ver_str=${_fl_ver_str#*.}
     _fl_minor=${_fl_ver_str%%[^0-9]*}
     # Validate we got numbers
-    case "$_fl_major$_fl_minor" in
-        *[!0-9]*) return 1 ;;
-    esac
-    [ "$_fl_major" -gt 8 ] && return 0
-    [ "$_fl_major" -eq 8 ] && [ "$_fl_minor" -ge 4 ] && return 0
-    return 1
+    [[ "$_fl_major$_fl_minor" =~ ^[0-9]+$ ]] || return 1
+    (( _fl_major > 8 || (_fl_major == 8 && _fl_minor >= 4) ))
 }
 
 # Primary: SSH_ASKPASS with SSH_ASKPASS_REQUIRE=force (OpenSSH 8.4+)
@@ -216,7 +211,7 @@ fl_require_cmd() {
     _fl_cmd="$1"
     _fl_hint="${2:-}"
     if ! fl_is_command "$_fl_cmd"; then
-        if [ -n "$_fl_hint" ]; then
+        if [[ -n "$_fl_hint" ]]; then
             fl_die "'$_fl_cmd' not found. Install: $_fl_hint"
         else
             fl_die "'$_fl_cmd' not found"
@@ -232,50 +227,17 @@ fl_tempfile() {
 
 # ── 7. Cleanup framework ────────────────────────────────────────────
 
-_FL_CLEANUP_HANDLERS=""
+_FL_CLEANUP_HANDLERS=()
 
 fl_cleanup_add() {
-    if [ -z "$_FL_CLEANUP_HANDLERS" ]; then
-        _FL_CLEANUP_HANDLERS="$1"
-    else
-        _FL_CLEANUP_HANDLERS="$_FL_CLEANUP_HANDLERS
-$1"
-    fi
+    _FL_CLEANUP_HANDLERS+=("$1")
 }
 
 _fl_run_cleanup() {
-    local _fl_handler
+    local _fl_i
     # Process in reverse order (LIFO)
-    _fl_reversed=""
-    _fl_rest="$_FL_CLEANUP_HANDLERS"
-    while [ -n "$_fl_rest" ]; do
-        _fl_handler="${_fl_rest%%
-*}"
-        if [ "$_fl_handler" = "$_fl_rest" ]; then
-            _fl_rest=""
-        else
-            _fl_rest="${_fl_rest#*
-}"
-        fi
-        if [ -z "$_fl_reversed" ]; then
-            _fl_reversed="$_fl_handler"
-        else
-            _fl_reversed="$_fl_handler
-$_fl_reversed"
-        fi
-    done
-
-    _fl_rest="$_fl_reversed"
-    while [ -n "$_fl_rest" ]; do
-        _fl_handler="${_fl_rest%%
-*}"
-        if [ "$_fl_handler" = "$_fl_rest" ]; then
-            _fl_rest=""
-        else
-            _fl_rest="${_fl_rest#*
-}"
-        fi
-        [ -n "$_fl_handler" ] && "$_fl_handler"
+    for (( _fl_i=${#_FL_CLEANUP_HANDLERS[@]}-1; _fl_i>=0; _fl_i-- )); do
+        "${_FL_CLEANUP_HANDLERS[$_fl_i]}"
     done
 }
 
