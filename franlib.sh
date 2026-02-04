@@ -48,6 +48,7 @@ fl_die() {
 # ── 3. User input ───────────────────────────────────────────────────
 
 fl_ask() {
+    local _fl_answer
     printf '%s ' "$1" >&2
     IFS= read -r _fl_answer
     printf '%s' "$_fl_answer"
@@ -96,18 +97,19 @@ fl_run() {
 }
 
 fl_run_or_die() {
-    "$@" || fl_die "Command failed: $*"
+    fl_run "$@" || fl_die "Command failed: $*"
 }
 
 fl_run_capture() {
-    local _fl_rc
-    _fl_output=$("$@" 2>&1)
-    _fl_rc=$?
+    local _fl_rc=0 _fl_output
+    _fl_output=$(fl_run "$@" 2>&1) || _fl_rc=$?
     printf '%s\n' "$_fl_output"
     return "$_fl_rc"
 }
 
 # ── 5. SSH password automation ──────────────────────────────────────
+
+_FL_SSH_OPTS=(-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o LogLevel=ERROR)
 
 # Check if OpenSSH supports SSH_ASKPASS_REQUIRE (>= 8.4)
 _fl_ssh_check_askpass_require() {
@@ -123,18 +125,26 @@ _fl_ssh_check_askpass_require() {
     (( _fl_major > 8 || (_fl_major == 8 && _fl_minor >= 4) ))
 }
 
+# Create a temporary askpass script that echoes the given password.
+# Prints the script path to stdout. Caller must rm -f when done.
+_fl_ssh_make_askpass() {
+    local _fl_pass="$1" _fl_script _fl_escaped
+    _fl_script=$(fl_tempfile fl_askpass)
+    # Single-quote the password, escaping any embedded single quotes
+    _fl_escaped=${_fl_pass//\'/\'\\\'\'}
+    printf "#!/bin/sh\\nprintf '%%s' '%s'\\n" "$_fl_escaped" > "$_fl_script"
+    chmod 700 "$_fl_script"
+    printf '%s' "$_fl_script"
+}
+
 # Primary: SSH_ASKPASS with SSH_ASKPASS_REQUIRE=force (OpenSSH 8.4+)
 _fl_ssh_via_askpass_force() {
     local _fl_host _fl_user _fl_pass _fl_cmds _fl_askpass_script _fl_rc
     _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
-    _fl_askpass_script=$(fl_tempfile fl_askpass)
-    printf '#!/bin/sh\nprintf "%%s" "%s"\n' "$_fl_pass" > "$_fl_askpass_script"
-    chmod 700 "$_fl_askpass_script"
+    _fl_askpass_script=$(_fl_ssh_make_askpass "$_fl_pass")
     _fl_rc=0
     SSH_ASKPASS="$_fl_askpass_script" SSH_ASKPASS_REQUIRE=force ssh \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        -o LogLevel=ERROR \
+        "${_FL_SSH_OPTS[@]}" \
         "${_fl_user}@${_fl_host}" "$_fl_cmds" </dev/null || _fl_rc=$?
     rm -f "$_fl_askpass_script"
     return "$_fl_rc"
@@ -144,14 +154,10 @@ _fl_ssh_via_askpass_force() {
 _fl_ssh_via_askpass_setsid() {
     local _fl_host _fl_user _fl_pass _fl_cmds _fl_askpass_script _fl_rc
     _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
-    _fl_askpass_script=$(fl_tempfile fl_askpass)
-    printf '#!/bin/sh\nprintf "%%s" "%s"\n' "$_fl_pass" > "$_fl_askpass_script"
-    chmod 700 "$_fl_askpass_script"
+    _fl_askpass_script=$(_fl_ssh_make_askpass "$_fl_pass")
     _fl_rc=0
     SSH_ASKPASS="$_fl_askpass_script" DISPLAY=:0 setsid ssh \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        -o LogLevel=ERROR \
+        "${_FL_SSH_OPTS[@]}" \
         "${_fl_user}@${_fl_host}" "$_fl_cmds" </dev/null || _fl_rc=$?
     rm -f "$_fl_askpass_script"
     return "$_fl_rc"
@@ -162,15 +168,15 @@ _fl_ssh_via_sshpass() {
     local _fl_host _fl_user _fl_pass _fl_cmds
     _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
     SSHPASS="$_fl_pass" sshpass -e ssh \
-        -o StrictHostKeyChecking=no \
-        -o UserKnownHostsFile=/dev/null \
-        -o LogLevel=ERROR \
+        "${_FL_SSH_OPTS[@]}" \
         "${_fl_user}@${_fl_host}" "$_fl_cmds"
 }
 
 fl_ssh_run() {
     local _fl_host _fl_user _fl_pass _fl_cmds
     _fl_host="$1"; _fl_user="$2"; _fl_pass="$3"; _fl_cmds="$4"
+
+    fl_print_command "ssh ${_fl_user}@${_fl_host} '${_fl_cmds}'"
 
     # 1. SSH_ASKPASS_REQUIRE=force (OpenSSH 8.4+, zero dependencies)
     if _fl_ssh_check_askpass_require; then

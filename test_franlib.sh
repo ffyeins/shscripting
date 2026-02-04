@@ -66,13 +66,24 @@ out=$(fl_run echo hello)
 assert_eq "fl_run echo" "$out" "hello"
 
 out=$(fl_run_capture echo "capture this")
-assert_eq "fl_run_capture echo" "$out" "capture this"
+# fl_run_capture merges stderr (including the [COMMAND] log) into stdout
+assert_eq "fl_run_capture echo" "$([[ "$out" == *"capture this"* ]] && echo yes)" "yes"
 
 assert_rc "fl_run_or_die true" 0 fl_run_or_die true
 
 _rc=0
 (fl_run_or_die false 2>/dev/null) || _rc=$?
 assert_eq "fl_run_or_die false dies" "$([[ "$_rc" -ne 0 ]] && echo yes)" "yes"
+
+# fl_run_or_die logs the command via fl_run
+_stderr=$(fl_run_or_die echo hi 2>&1 >/dev/null)
+assert_eq "fl_run_or_die logs command" "$([[ "$_stderr" == *"[COMMAND]"*"echo hi"* ]] && echo yes)" "yes"
+
+# fl_run_capture logs the command via fl_run
+_stderr=$(fl_run_capture echo hi 2>/dev/null; true)  # capture stdout, but stderr went to /dev/null
+# Run again, capturing stderr this time
+_both=$(fl_run_capture echo hi 2>&1)
+assert_eq "fl_run_capture logs command" "$([[ "$_both" == *"[COMMAND]"*"echo hi"* ]] && echo yes)" "yes"
 
 # ── fl_tempfile ──────────────────────────────────────────────────────
 
@@ -151,6 +162,27 @@ _fl_test_version_check "OpenSSH_9.2p1 Debian-2" 0 "ssh version 9.2 >= 8.4"
 _fl_test_version_check "OpenSSH_8.3p1, OpenSSL 1.1.1" 1 "ssh version 8.3 < 8.4"
 _fl_test_version_check "OpenSSH_7.9p1" 1 "ssh version 7.9 < 8.4"
 _fl_test_version_check "OpenSSH_10.0p1" 0 "ssh version 10.0 >= 8.4"
+
+# ── fl_ssh_run logs the command ──────────────────────────────────────
+
+# fl_ssh_run should log a [COMMAND] line with user@host before attempting SSH.
+# We run it in a subshell and expect it to fail (no actual SSH server), but the
+# log line should still appear on stderr.
+_stderr=$( (fl_ssh_run "testhost" "testuser" "testpass" "uptime" 2>&1 >/dev/null) 2>&1 || true )
+assert_eq "fl_ssh_run logs command" \
+    "$([[ "$_stderr" == *"[COMMAND]"*"ssh testuser@testhost"*"uptime"* ]] && echo yes)" "yes"
+
+# ── _fl_ssh_make_askpass (password escaping) ─────────────────────────
+
+_askpass_script=$(_fl_ssh_make_askpass "simple")
+_askpass_out=$(sh "$_askpass_script")
+rm -f "$_askpass_script"
+assert_eq "askpass simple password" "$_askpass_out" "simple"
+
+_askpass_script=$(_fl_ssh_make_askpass "it's a \"test\" \$HOME")
+_askpass_out=$(sh "$_askpass_script")
+rm -f "$_askpass_script"
+assert_eq "askpass special chars" "$_askpass_out" "it's a \"test\" \$HOME"
 
 # ── Summary ──────────────────────────────────────────────────────────
 
