@@ -51,13 +51,13 @@ Expected: zero warnings. SC2329 (info) on test file is a false positive for indi
 
 The library provides colored output functions for different message types:
 
-- `fl_info` — informational messages (cyan tag `[INFO]`, default message text)
-- `fl_warn` — warning messages (entire line in yellow: `[WARN] message`)
-- `fl_error` — error messages (entire line in bold red: `[ERROR] message`)
-- `fl_success` — success messages (entire line in green: `[SUCCESS] message`)
-- `fl_print_command` — command logging (cyan tag `[COMMAND]`, default message text)
+- `fl_info` — informational messages (cyan tag `[ INFO ]`, default message text)
+- `fl_warn` — warning messages (entire line in yellow: `[ WARN ] message`)
+- `fl_error` — error messages (entire line in bold red: `[ ERROR ] message`)
+- `fl_ok` — success messages (entire line in bold green: `[ OK ] message`)
+- `fl_print_command` — command logging (cyan tag `[ CMD ]`, default message text)
 
-For `fl_warn`, `fl_error`, and `fl_success`, the entire line (tag and message) is colored. All output goes to stderr to keep stdout clean for data.
+For `fl_warn`, `fl_error`, and `fl_ok`, the entire line (tag and message) is colored. All output goes to stderr to keep stdout clean for data.
 
 ## User input
 

@@ -43,6 +43,7 @@ assert_eq "source guard set" "$_FL_SOURCED" "1"
 fl_info "Testing fl_info — you should see this"
 fl_warn "Testing fl_warn — you should see this"
 fl_error "Testing fl_error — you should see this"
+fl_ok "Testing fl_ok — you should see this"
 fl_info "(fl_die not tested directly — it would exit the script)"
 
 # ── fl_is_command / fl_require_cmd ───────────────────────────────────
@@ -66,7 +67,7 @@ out=$(fl_run echo hello)
 assert_eq "fl_run echo" "$out" "hello"
 
 out=$(fl_run_capture echo "capture this")
-# fl_run_capture merges stderr (including the [COMMAND] log) into stdout
+# fl_run_capture merges stderr (including the [ CMD ] log) into stdout
 assert_eq "fl_run_capture echo" "$([[ "$out" == *"capture this"* ]] && echo yes)" "yes"
 
 assert_rc "fl_run_or_die true" 0 fl_run_or_die true
@@ -77,13 +78,13 @@ assert_eq "fl_run_or_die false dies" "$([[ "$_rc" -ne 0 ]] && echo yes)" "yes"
 
 # fl_run_or_die logs the command via fl_run
 _stderr=$(fl_run_or_die echo hi 2>&1 >/dev/null)
-assert_eq "fl_run_or_die logs command" "$([[ "$_stderr" == *"[COMMAND]"*"echo hi"* ]] && echo yes)" "yes"
+assert_eq "fl_run_or_die logs command" "$([[ "$_stderr" == *"[ CMD ]"*"echo hi"* ]] && echo yes)" "yes"
 
 # fl_run_capture logs the command via fl_run
 _stderr=$(fl_run_capture echo hi 2>/dev/null; true)  # capture stdout, but stderr went to /dev/null
 # Run again, capturing stderr this time
 _both=$(fl_run_capture echo hi 2>&1)
-assert_eq "fl_run_capture logs command" "$([[ "$_both" == *"[COMMAND]"*"echo hi"* ]] && echo yes)" "yes"
+assert_eq "fl_run_capture logs command" "$([[ "$_both" == *"[ CMD ]"*"echo hi"* ]] && echo yes)" "yes"
 
 # ── fl_tempfile ──────────────────────────────────────────────────────
 
@@ -157,12 +158,12 @@ _fl_test_version_check "OpenSSH_10.0p1" 0 "ssh version 10.0 >= 8.4"
 
 # ── fl_ssh_run logs the command ──────────────────────────────────────
 
-# fl_ssh_run should log a [COMMAND] line with user@host before attempting SSH.
+# fl_ssh_run should log a [ CMD ] line with user@host before attempting SSH.
 # We run it in a subshell and expect it to fail (no actual SSH server), but the
 # log line should still appear on stderr.
 _stderr=$( (fl_ssh_run "testhost" "testuser" "testpass" "uptime" 2>&1 >/dev/null) 2>&1 || true )
 assert_eq "fl_ssh_run logs command" \
-    "$([[ "$_stderr" == *"[COMMAND]"*"ssh testuser@testhost"*"uptime"* ]] && echo yes)" "yes"
+    "$([[ "$_stderr" == *"[ CMD ]"*"ssh testuser@testhost"*"uptime"* ]] && echo yes)" "yes"
 
 # ── _fl_ssh_make_askpass (password escaping) ─────────────────────────
 

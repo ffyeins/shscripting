@@ -27,23 +27,23 @@ fi
 # ── 2. Output functions ─────────────────────────────────────────────
 
 fl_info() {
-    printf '%b[INFO]%b %s\n' "$_FL_CYAN" "$_FL_RESET" "$1" >&2
+    printf '%b[ INFO ]%b %s\n' "$_FL_CYAN" "$_FL_RESET" "$1" >&2
 }
 
 fl_warn() {
-    printf '%b[WARN] %s%b\n' "$_FL_YELLOW" "$1" "$_FL_RESET" >&2
+    printf '%b[ WARN ] %s%b\n' "$_FL_YELLOW" "$1" "$_FL_RESET" >&2
 }
 
 fl_error() {
-    printf '%b%b[ERROR] %s%b\n' "$_FL_BOLD" "$_FL_RED" "$1" "$_FL_RESET" >&2
+    printf '%b%b[ ERROR ] %s%b\n' "$_FL_BOLD" "$_FL_RED" "$1" "$_FL_RESET" >&2
 }
 
-fl_success() {
-    printf '%b[SUCCESS] %s%b\n' "$_FL_GREEN" "$1" "$_FL_RESET" >&2
+fl_ok() {
+    printf '%b%b[ OK ] %s%b\n' "$_FL_BOLD" "$_FL_GREEN" "$1" "$_FL_RESET" >&2
 }
 
 fl_print_command() {
-    printf '%b[COMMAND]%b %s\n' "$_FL_CYAN" "$_FL_RESET" " $ $1" >&2
+    printf '%b[ CMD ]%b %s\n' "$_FL_CYAN" "$_FL_RESET" " $ $1" >&2
 }
 
 fl_die() {
