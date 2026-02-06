@@ -11,7 +11,7 @@ fl_info "Running: echo \"Hello this is the first command!\""
 fl_run echo "Hello this is the first command!"
 
 fl_info "Running: cd ~/dotfiles"
-fl_run ~/dotfiles
+fl_run cd ~/dotfiles
 
 fl_info "Running: eza -ls"
 fl_require_cmd eza "https://github.com/eza-community/eza"
