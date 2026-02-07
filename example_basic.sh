@@ -14,7 +14,7 @@ fl_info "Running: cd ~/dotfiles"
 fl_run cd ~/dotfiles
 
 fl_info "Running: eza -ls"
-fl_require_cmd eza "https://github.com/eza-community/eza"
+fl_require_cmd eza
 fl_run eza -1
 
 fl_info "Running: dynamic progress counter"

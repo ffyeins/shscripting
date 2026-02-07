@@ -198,15 +198,10 @@ fl_is_command() {
 }
 
 fl_require_cmd() {
-    local _fl_cmd _fl_hint
+    local _fl_cmd
     _fl_cmd="$1"
-    _fl_hint="${2:-}"
     if ! fl_is_command "$_fl_cmd"; then
-        if [[ -n "$_fl_hint" ]]; then
-            fl_die "'$_fl_cmd' not found. Install: $_fl_hint"
-        else
-            fl_die "'$_fl_cmd' not found"
-        fi
+        fl_die "'$_fl_cmd' not found. Install to use this script."
     fi
 }
 

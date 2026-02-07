@@ -62,8 +62,8 @@ if fl_is_command docker; then
     fl_info "Docker is installed"
 fi
 
-fl_require_cmd curl "apt install curl"
-# Exits with an error if curl is not found, showing the install hint
+fl_require_cmd curl
+# Exits with an error if curl is not found
 ```
 
 ## Temp files

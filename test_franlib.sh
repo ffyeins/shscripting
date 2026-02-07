@@ -58,7 +58,7 @@ _pass=$((_pass + 1))
 
 # fl_require_cmd for missing command — run in subshell to catch exit
 _rc=0
-(fl_require_cmd nonexistent_xyz "some hint" 2>/dev/null) || _rc=$?
+(fl_require_cmd nonexistent_xyz 2>/dev/null) || _rc=$?
 assert_eq "fl_require_cmd dies for missing cmd" "$([[ "$_rc" -ne 0 ]] && echo yes)" "yes"
 
 # ── fl_run / fl_run_or_die / fl_run_capture ─────────────────────────
